@@ -11,7 +11,7 @@ config.read(config_file_path)
 def apply_migrations():
     connection = create_connection()
     cursor = connection.cursor()
-    migration_dir = config['migrations']['MigrationsPath']
+    migration_dir = config['migrations']['MIGRATION_PATH']
     migration_files = sorted(f for f in os.listdir(migration_dir) if f.endswith('.sql'))
 
     for migration_file in migration_files:
