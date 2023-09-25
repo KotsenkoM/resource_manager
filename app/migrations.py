@@ -7,6 +7,7 @@ config_file_path = os.path.join(current_directory, '../config.ini')
 config = configparser.ConfigParser()
 config.read(config_file_path)
 
+
 def apply_migrations():
     connection = create_connection()
     cursor = connection.cursor()

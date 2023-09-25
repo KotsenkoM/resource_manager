@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13.0-alpine
+    container_name: resource_manager_db
+    env_file: ./config.ini
+
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resource_manager
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file: ./config.ini
+    command: python migrations.py
