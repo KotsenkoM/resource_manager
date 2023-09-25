@@ -1,28 +1,20 @@
+import os
 import configparser
 import psycopg2
 
-config = configparser.ConfigParser()
-config.read('config.ini')
 
-CONNECTION = psycopg2.connect(
-            database=config['database']['DATABASE_NAME'],
-            user=config['database']['DATABASE_USER'],
-            password=config['database']['DATABASE_PASSWORD'],
-            host=config['database']['DATABASE_HOST'],
-            port=config['database']['DATABASE_PORT']
-        )
+def create_connection():
+    current_directory = os.getcwd()
+    config_file_path = os.path.join(current_directory, '../config.ini')
+    config = configparser.ConfigParser()
+    config.read(config_file_path)
 
-def db_connection(func):
-    def wrapper(*args, **kwargs):
-        connection = psycopg2.connect(
-            database=config['database']['DATABASE_NAME'],
-            user=config['database']['DATABASE_USER'],
-            password=config['database']['DATABASE_PASSWORD'],
-            host=config['database']['DATABASE_HOST'],
-            port=config['database']['DATABASE_PORT']
-        )
-        cursor = connection.cursor()
-        result = func(*args, cursor=cursor, connection=connection, **kwargs)
-        cursor.close()
-        return result
-    return wrapper
+    connection = psycopg2.connect(
+        database=config['database']['DbName'],
+        user=config['database']['DbUser'],
+        password=config['database']['DbPass'],
+        host=config['database']['DbHost'],
+        port=config['database']['DbPort']
+    )
+
+    return connection
