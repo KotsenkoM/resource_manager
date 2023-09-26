@@ -12,7 +12,8 @@ def apply_migrations():
     connection = create_connection()
     cursor = connection.cursor()
     migration_dir = config['migrations']['MIGRATION_PATH']
-    migration_files = sorted(f for f in os.listdir(migration_dir) if f.endswith('.sql'))
+    migration_files = sorted(f for f in os.listdir(migration_dir) if f.startswith('00'))
+    fixture_files = sorted(f for f in os.listdir(migration_dir) if f.endswith('fixtures.sql'))
 
     for migration_file in migration_files:
         migration_name = os.path.splitext(migration_file)[0]
@@ -21,6 +22,13 @@ def apply_migrations():
             cursor.execute(migration_sql)
         connection.commit()
         print(f'Applied migration: {migration_name}')
+
+    for fixture in fixture_files:
+        with open(os.path.join(migration_dir, fixture), 'r') as f:
+            migration_sql = f.read()
+            cursor.execute(migration_sql)
+        connection.commit()
+        print(f'Applied fixture: {fixture}')
 
     cursor.close()
     connection.close()

@@ -63,14 +63,14 @@ class ResourceApp:
         with self.conn.cursor() as cursor:
             try:
                 cursor.execute(
-                    'UPDATE resource SET type_id = %s, name = %s, current_speed = %s WHERE id = %s',
+                    'UPDATE resource SET type_id = %s, name = %s, current_speed = %s WHERE id IN %s',
                     (data['type_id'], data['name'], data['current_speed'], id)
                 )
                 self.conn.commit()
             except (Exception, psycopg2.DatabaseError) as e:
                 return {'error': str(e)}
 
-    def delete_data(self, id):
+    def delete_data(self, id, data):
         with self.conn.cursor() as cursor:
             try:
                 cursor.execute('DELETE FROM resource WHERE id = %s', (id,))
@@ -111,14 +111,14 @@ class TypeApp:
         with self.conn.cursor() as cursor:
             try:
                 cursor.execute(
-                    'UPDATE resource_type SET name = %s, max_speed = %s WHERE id = %s',
+                    'UPDATE resource_type SET name = %s, max_speed = %s WHERE id IN %s',
                     (data['name'], data['max_speed'], id)
                 )
                 self.conn.commit()
             except (Exception, psycopg2.DatabaseError) as e:
                 return {'error': str(e)}
 
-    def delete_data(self, id):
+    def delete_data(self, id, data):
         with self.conn.cursor() as cursor:
             try:
                 cursor.execute('DELETE FROM resource_type WHERE id = %s', (id,))
@@ -144,7 +144,7 @@ routes = [
 
 
 def application(environ, start_response):
-    response_body = {}
+    response_body = ''
     status = '200 OK'
     response_headers = [('Content-type', 'application/json')]
 
@@ -152,11 +152,11 @@ def application(environ, start_response):
     request_method = environ['REQUEST_METHOD']
 
     for method, pattern, class_instance, func_name in routes:
-        if request_method == 'GET' and re.match(r'/resource/filter_by_type/(\d+)', path):
+        if request_method == 'GET' and re.match(r'^/resource/filter_by_type/(\d+)$', path):
             try:
-                match = re.match(r'/resource/filter_by_type/(\d+)', path)
+                match = re.match(r'^/resource/filter_by_type/(\d+)$', path)
                 type_id = int(match.group(1))
-                handler = resource_app.get_data_filtered_by_type
+                handler = class_instance.get_data_filtered_by_type
                 response_body = json.dumps(handler(type_id))
             except ValueError as ve:
                 response_body = json.dumps({'error': str(ve)})
@@ -164,16 +164,19 @@ def application(environ, start_response):
             except Exception as e:
                 response_body = json.dumps({'error': str(e)})
                 status = '500 Internal Server Error'
-        if request_method == method and re.match(pattern, path):
+        elif request_method == method and re.match(pattern, path):
             try:
                 match = re.match(pattern, path)
-                if match.groups():
-                    args = [int(arg) for arg in match.groups()]
-                    handler = getattr(class_instance, func_name)
+                args = [int(arg) for arg in match.groups()]
+                handler = getattr(class_instance, func_name)
+                if match.groups() and method != 'GET':
+                    data_id = match.groups(1)
+                    data = json.loads(environ['wsgi.input'].read(int(environ.get('CONTENT_LENGTH', 0))))
+                    response_body = json.dumps(handler(data_id, data))
+                elif match.groups():
                     response_body = json.dumps(handler(*args))
                 else:
                     data = json.loads(environ['wsgi.input'].read(int(environ.get('CONTENT_LENGTH', 0))))
-                    handler = getattr(class_instance, func_name)
                     response_body = json.dumps(handler(data))
             except ValueError as ve:
                 response_body = json.dumps({'error': str(ve)})
@@ -181,10 +184,9 @@ def application(environ, start_response):
             except Exception as e:
                 response_body = json.dumps({'error': str(e)})
                 status = '500 Internal Server Error'
-            break
-    else:
+    if not response_body:
         response_body = json.dumps({'error': 'Invalid request method or path'})
-        status = '400 Bad Request'
+        status = '404 Not Found'
 
     start_response(status, response_headers)
     return [response_body.encode('utf-8')]
