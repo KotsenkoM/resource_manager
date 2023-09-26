@@ -10,11 +10,11 @@ def create_connection():
     config.read(config_file_path)
 
     connection = psycopg2.connect(
-        database=config['database']['DB_NAME'],
-        user=config['database']['DB_USER'],
-        password=config['database']['DB_PASS'],
-        host=config['database']['DB_HOST'],
-        port=config['database']['DB_PORT']
+        database='postgres',
+        user='postgres',
+        password='postgres',
+        host='db',
+        port='5432'
     )
 
     return connection
